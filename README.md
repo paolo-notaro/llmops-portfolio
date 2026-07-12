@@ -18,9 +18,10 @@ The goal is to show how I think about LLM evaluation, RAG quality, observability
 
 - Local RAG over synthetic Markdown documents using TF-IDF retrieval.
 - Deterministic mock LLM provider with optional environment-driven provider placeholders.
-- Multi-dimensional evaluation across format, grounding, retrieval overlap, safety, refusal behavior, and latency.
+- Versioned offline quality gates over a 30-case annotated synthetic dataset.
+- Rolling live request checks using clearly labeled reference-free proxies rather than accuracy claims.
 - Machine-readable and human-readable evaluation reports.
-- FastAPI service with a deployable frontend, `/health`, `/query`, `/evaluation/report`, `/trace/latest`, and Prometheus-style `/metrics`.
+- FastAPI service with a deployable frontend, stable offline snapshots, live monitoring, dataset metadata, and Prometheus-style metrics.
 - Clean separation between retrieval, providers, evaluators, reporting, observability, and API layers.
 - Privacy-safe documentation and sanitized case studies for production-style LLMOps patterns.
 
@@ -51,7 +52,9 @@ curl -s -X POST http://127.0.0.1:8000/query \
 The FastAPI service serves two frontend surfaces:
 
 - `/app`: customer-facing synthetic RAG assistant with cited answers, sample prompts, source cards, and refusal behavior.
-- `/ops`: LLMOps / DevOps console with evaluation pass rates, latest query trace, topology, retrieval signals, latency, and Prometheus-style metrics.
+- `/ops`: evaluation console separating versioned offline gates from rolling live request diagnostics, with annotated-dataset methodology, review queues, topology, and Prometheus-style metrics.
+
+The offline snapshot is returned by `GET /evaluation/offline` and changes only after an explicit `POST /evaluation/offline/run`. Live customer requests are summarized by `GET /evaluation/live`. Annotation coverage and metric denominators are inspectable through `GET /evaluation/dataset`.
 
 The root page `/` links to both surfaces. The implementation is static HTML/CSS/JS served by FastAPI, so it deploys with the same container as the API and does not require an npm build.
 
@@ -60,7 +63,8 @@ The root page `/` links to both surfaces. The implementation is static HTML/CSS/
 ```text
 docs/                         Sanitized architecture notes and case studies
 examples/synthetic_docs/      Synthetic corpus used by the local RAG demo
-examples/evaluation_sets/     JSONL evaluation examples
+datasets/ground_truth/         Versioned annotated offline benchmark
+examples/evaluation_sets/     Legacy compact evaluator fixtures
 frontend/                     Static customer app and Ops console
 src/llmops_portfolio/         Python package and FastAPI backend
 tests/                        Deterministic unit tests
@@ -87,14 +91,13 @@ flowchart LR
 
 ## Evaluation Dimensions
 
-- **Format compliance:** checks expected citation format and response structure.
-- **Grounding / citation presence:** verifies cited synthetic documents are present in retrieved context.
-- **Retrieval overlap:** measures whether expected terms appear in retrieved documents.
-- **Safety keyword check:** flags prompts containing representative unsafe request patterns.
-- **Refusal behavior:** verifies unsafe prompts receive a refusal-style response.
-- **Latency measurement:** records provider latency and applies a local threshold.
+The Ops console keeps two evaluation populations separate:
 
-These checks are intentionally transparent. They are not a replacement for human review, model-graded evaluation, red teaming, or production telemetry, but they show the scaffolding used to make those processes repeatable.
+**Offline benchmark:** 30 manually authored synthetic cases label expected source documents, support terms, expected actions, output contracts, prompt families, perturbations, and risk tags. Retrieval F1, citation support, answer grounding, balanced policy accuracy, format compliance, and paired robustness each expose their own denominator and threshold. The snapshot is deterministic with the mock provider; local timing is reported separately.
+
+**Live request checks:** customer-app traffic is evaluated without reference answers using evidence-support overlap, citation validity, retrieval confidence, policy consistency, and response-contract checks. These are diagnostic proxies, not factual accuracy or retrieval recall. Uncertain requests can be reviewed and promoted into future annotated regression cases.
+
+The evaluators are intentionally transparent. They are not a replacement for human review, semantic model judges, red teaming, or production telemetry, but they make assumptions and failure signals inspectable.
 
 ## Privacy And Confidentiality
 
@@ -111,7 +114,7 @@ See [docs/confidentiality.md](docs/confidentiality.md) for the full privacy post
 ## Future Work
 
 - Add optional OpenTelemetry export for traces and spans.
-- Add a small dashboard for comparing evaluation runs.
+- Add persisted run history and baseline-to-candidate comparisons.
 - Add provider adapters guarded by explicit environment variables and test doubles.
 - Add mutation-style robustness checks for prompt injection and citation drift.
 - Add CI quality gates that fail when pass rates regress below configured thresholds.

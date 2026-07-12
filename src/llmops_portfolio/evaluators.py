@@ -41,6 +41,15 @@ METRIC_THRESHOLDS = {
     "robustness_consistency": 0.78,
 }
 
+METRIC_POPULATIONS = {
+    "evidence_retrieval_f1": "Cases with annotated expected source documents",
+    "citation_support": "Cases expected to receive an answer",
+    "answer_grounding": "Cases expected to receive an answer",
+    "policy_decision_accuracy": "All cases, balanced across expected actions",
+    "format_contract_pass_rate": "All annotated cases",
+    "robustness_consistency": "Paired base-to-variant comparisons",
+}
+
 METRIC_COPY = {
     "evidence_retrieval_f1": (
         "Evidence Retrieval F1",
@@ -324,7 +333,18 @@ def summarize_records(records: list[EvaluationRecord]) -> SummaryMetrics:
         "format_contract_pass_rate": _mean_metric(records, "format_contract_pass_rate", lambda r: True),
         "robustness_consistency": _robustness_consistency(records),
     }
-    quality_metrics = [_metric_definition(name, value) for name, value in metric_values.items()]
+    metric_populations = {
+        "evidence_retrieval_f1": sum(bool(record.expected_source_docs) for record in records),
+        "citation_support": sum(record.expected_action == "answer" for record in records),
+        "answer_grounding": sum(record.expected_action == "answer" for record in records),
+        "policy_decision_accuracy": len(records),
+        "format_contract_pass_rate": len(records),
+        "robustness_consistency": _robustness_comparison_count(records),
+    }
+    quality_metrics = [
+        _metric_definition(name, value, metric_populations[name])
+        for name, value in metric_values.items()
+    ]
     dimension_pass_rates = {metric.name: round(metric.value, 3) for metric in quality_metrics}
     retrieval_hit_rate = _mean([1.0 if _retrieved_doc_ids(record.retrieved_docs) else 0.0 for record in records])
     return SummaryMetrics(
@@ -338,6 +358,8 @@ def summarize_records(records: list[EvaluationRecord]) -> SummaryMetrics:
         retrieval_hit_rate=round(retrieval_hit_rate, 3),
         review_count=sum(record.requires_review for record in records),
         quality_metrics=quality_metrics,
+        gates_passed=sum(metric.passed for metric in quality_metrics),
+        gates_total=len(quality_metrics),
     )
 
 
@@ -544,7 +566,15 @@ def _robustness_consistency(records: list[EvaluationRecord]) -> float:
     return _mean(consistency)
 
 
-def _metric_definition(name: str, value: float) -> MetricDefinition:
+def _robustness_comparison_count(records: list[EvaluationRecord]) -> int:
+    grouped: dict[str, list[EvaluationRecord]] = defaultdict(list)
+    for record in records:
+        if record.pair_id:
+            grouped[record.pair_id].append(record)
+    return sum(max(0, len(group) - 1) for group in grouped.values())
+
+
+def _metric_definition(name: str, value: float, sample_count: int) -> MetricDefinition:
     label, formula, explanation = METRIC_COPY[name]
     threshold = METRIC_THRESHOLDS[name]
     return MetricDefinition(
@@ -558,6 +588,8 @@ def _metric_definition(name: str, value: float) -> MetricDefinition:
         formula_notation_latex=METRIC_NOTATION_LATEX[name],
         explanation=explanation,
         passed=value >= threshold,
+        sample_count=sample_count,
+        population=METRIC_POPULATIONS[name],
     )
 
 

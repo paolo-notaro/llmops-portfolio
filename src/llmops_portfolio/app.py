@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+from collections import deque
+from datetime import UTC, datetime
 from functools import lru_cache
 
 from fastapi import FastAPI
@@ -10,29 +12,38 @@ from fastapi.responses import FileResponse, PlainTextResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from llmops_portfolio.config import REPO_ROOT, Settings, load_settings
+from llmops_portfolio.dataset import build_dataset_profile, load_evaluation_examples
 from llmops_portfolio.evaluators import evaluate_examples
+from llmops_portfolio.live_evaluation import evaluate_live_request, summarize_live_requests
 from llmops_portfolio.models import (
+    DatasetProfile,
     DocumentSummary,
     EvaluationExample,
     EvaluationReport,
+    LiveEvaluationRecord,
+    LiveMonitoringReport,
     QueryRequest,
     QueryResponse,
     QueryTrace,
-    RetrievedDocument,
 )
 from llmops_portfolio.observability import metrics_registry
 from llmops_portfolio.providers import LLMProvider, provider_from_env
 from llmops_portfolio.rag import LocalTfidfRAGIndex
+from llmops_portfolio.report import write_report
 
 
 FRONTEND_DIR = REPO_ROOT / "frontend"
 DOCS_DIR = REPO_ROOT / "docs"
+LIVE_WINDOW_LIMIT = 50
 
-app = FastAPI(title="LLMOps Portfolio API", version="0.1.0")
+app = FastAPI(title="LLMOps Portfolio API", version="0.2.0")
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 app.mount("/portfolio-docs", StaticFiles(directory=DOCS_DIR), name="portfolio-docs")
 
 _latest_trace = QueryTrace()
+_live_records: deque[LiveEvaluationRecord] = deque(maxlen=LIVE_WINDOW_LIMIT)
+_live_total_requests = 0
+_offline_report: EvaluationReport | None = None
 
 
 @lru_cache(maxsize=1)
@@ -60,14 +71,14 @@ def get_provider() -> LLMProvider:
 def get_evaluation_examples() -> tuple[EvaluationExample, ...]:
     """Load local JSONL evaluation examples."""
 
-    examples: list[EvaluationExample] = []
-    for path in sorted(get_settings().eval_dir.glob("*.jsonl")):
-        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if line.strip():
-                examples.append(EvaluationExample(**json.loads(line)))
-            else:
-                raise ValueError(f"Blank line in {path}:{line_number}")
-    return tuple(examples)
+    return tuple(load_evaluation_examples(get_settings().eval_dir))
+
+
+@lru_cache(maxsize=1)
+def get_dataset_profile() -> DatasetProfile:
+    """Return stable metadata for the annotated synthetic benchmark."""
+
+    return build_dataset_profile(list(get_evaluation_examples()), get_settings().eval_dir)
 
 
 @app.get("/", include_in_schema=False)
@@ -112,26 +123,44 @@ def documents() -> list[DocumentSummary]:
     return get_index().document_summaries
 
 
+@app.get("/evaluation/dataset", response_model=DatasetProfile)
+def evaluation_dataset() -> DatasetProfile:
+    """Describe the annotations and populations behind offline metrics."""
+
+    return get_dataset_profile()
+
+
+@app.get("/evaluation/offline", response_model=EvaluationReport)
+def offline_benchmark() -> EvaluationReport:
+    """Return the stable offline benchmark snapshot."""
+
+    return _get_offline_report()
+
+
+@app.post("/evaluation/offline/run", response_model=EvaluationReport)
+def run_offline_benchmark() -> EvaluationReport:
+    """Explicitly rerun and persist the offline benchmark."""
+
+    global _offline_report
+    _offline_report = _build_offline_report()
+    return _offline_report
+
+
 @app.get("/evaluation/report", response_model=EvaluationReport)
 def evaluation_report() -> EvaluationReport:
-    """Run the synthetic evaluation suite and return a report for the Ops console."""
+    """Compatibility alias for the stable offline benchmark."""
 
-    settings = get_settings()
-    provider = get_provider()
-    return evaluate_examples(
-        list(get_evaluation_examples()),
-        get_index(),
-        provider,
-        top_k=3,
-        max_latency_ms=settings.max_latency_ms,
-        config={
-            "provider": provider.name,
-            "docs_dir": str(settings.docs_dir),
-            "eval_dir": str(settings.eval_dir),
-            "top_k": 3,
-            "max_latency_ms": settings.max_latency_ms,
-            "mode": "api_live_summary",
-        },
+    return _get_offline_report()
+
+
+@app.get("/evaluation/live", response_model=LiveMonitoringReport)
+def live_monitoring() -> LiveMonitoringReport:
+    """Return rolling reference-free signals for interactive requests."""
+
+    return summarize_live_requests(
+        list(_live_records),
+        _live_total_requests,
+        window_limit=LIVE_WINDOW_LIMIT,
     )
 
 
@@ -144,16 +173,30 @@ def latest_trace() -> QueryTrace:
 
 @app.post("/query", response_model=QueryResponse)
 def query(request: QueryRequest) -> QueryResponse:
-    """Retrieve context and generate an answer."""
+    """Retrieve context, generate an answer, and record live quality proxies."""
 
-    global _latest_trace
+    global _latest_trace, _live_total_requests
     retrieved_docs = get_index().query(request.query, top_k=request.top_k)
     response = get_provider().generate(request.query, retrieved_docs)
-    quality_checks = _quality_checks(response.answer, response.latency_ms, retrieved_docs)
+    _live_total_requests += 1
+    live_record = evaluate_live_request(
+        request_id=f"req-{_live_total_requests:04d}",
+        timestamp=datetime.now(UTC).isoformat(),
+        query=request.query,
+        answer=response.answer,
+        provider=response.provider,
+        latency_ms=response.latency_ms,
+        retrieved_docs=retrieved_docs,
+    )
+    _live_records.append(live_record)
+    quality_checks = {
+        **live_record.checks,
+        "latency_under_threshold": response.latency_ms <= get_settings().max_latency_ms,
+    }
     metrics_registry.record_request(
         response.latency_ms,
         evaluation_passed=all(quality_checks.values()),
-        retrieval_hit=quality_checks["retrieval_hit"],
+        retrieval_hit=live_record.retrieved_count > 0,
     )
     _latest_trace = QueryTrace(
         query=request.query,
@@ -169,6 +212,7 @@ def query(request: QueryRequest) -> QueryResponse:
         latency_ms=response.latency_ms,
         retrieved_docs=retrieved_docs,
         quality_checks=quality_checks,
+        live_metrics=live_record.metrics,
     )
 
 
@@ -179,16 +223,45 @@ def metrics() -> str:
     return metrics_registry.render_prometheus()
 
 
-def _quality_checks(answer: str, latency_ms: float, retrieved_docs: list[RetrievedDocument]) -> dict[str, bool]:
-    """Compute lightweight live quality signals for an interactive query."""
+def _get_offline_report() -> EvaluationReport:
+    global _offline_report
+    if _offline_report is not None:
+        return _offline_report
+    stored_path = get_settings().reports_dir / "evaluation_report.json"
+    if stored_path.exists():
+        try:
+            candidate = EvaluationReport.model_validate(json.loads(stored_path.read_text(encoding="utf-8")))
+            if (
+                candidate.config.get("mode") == "offline_snapshot"
+                and candidate.config.get("dataset_version") == get_dataset_profile().version
+            ):
+                _offline_report = candidate
+                return _offline_report
+        except (json.JSONDecodeError, ValueError):
+            pass
+    _offline_report = _build_offline_report()
+    return _offline_report
 
-    lower_answer = answer.lower()
-    retrieval_hit = bool(retrieved_docs and retrieved_docs[0].score > 0)
-    refusal = "cannot help" in lower_answer
-    citation_present = "[doc:" in answer
-    return {
-        "retrieval_hit": retrieval_hit,
-        "citation_or_refusal": citation_present or refusal,
-        "grounded_when_answered": refusal or citation_present,
-        "latency_under_threshold": latency_ms <= get_settings().max_latency_ms,
-    }
+
+def _build_offline_report() -> EvaluationReport:
+    settings = get_settings()
+    provider = get_provider()
+    profile = get_dataset_profile()
+    report = evaluate_examples(
+        list(get_evaluation_examples()),
+        get_index(),
+        provider,
+        top_k=3,
+        max_latency_ms=settings.max_latency_ms,
+        config={
+            "provider": provider.name,
+            "retriever": "tfidf",
+            "dataset_id": profile.dataset_id,
+            "dataset_version": profile.version,
+            "top_k": 3,
+            "max_latency_ms": settings.max_latency_ms,
+            "mode": "offline_snapshot",
+        },
+    )
+    write_report(report, settings.reports_dir)
+    return report

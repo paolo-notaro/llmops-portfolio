@@ -90,6 +90,8 @@ class MetricDefinition(BaseModel):
     formula_notation_latex: list[str]
     explanation: str
     passed: bool
+    sample_count: int = Field(default=0, ge=0)
+    population: str = ""
 
 
 class EvaluationInsight(BaseModel):
@@ -139,6 +141,8 @@ class SummaryMetrics(BaseModel):
     latency_p50_ms: float = 0.0
     latency_p95_ms: float = 0.0
     operational_slo_passed: bool = True
+    gates_passed: int = 0
+    gates_total: int = 0
 
 
 class EvaluationReport(BaseModel):
@@ -167,6 +171,7 @@ class QueryResponse(BaseModel):
     latency_ms: float
     retrieved_docs: list[RetrievedDocument]
     quality_checks: dict[str, bool] = Field(default_factory=dict)
+    live_metrics: dict[str, float] = Field(default_factory=dict)
 
 
 class QueryTrace(BaseModel):
@@ -178,3 +183,79 @@ class QueryTrace(BaseModel):
     latency_ms: float = 0.0
     retrieved_docs: list[RetrievedDocument] = Field(default_factory=list)
     quality_checks: dict[str, bool] = Field(default_factory=dict)
+
+
+class DatasetFieldDefinition(BaseModel):
+    """Meaning of one human-authored ground-truth field."""
+
+    name: str
+    purpose: str
+
+
+class DatasetExampleSummary(BaseModel):
+    """Compact annotated example for methodology inspection."""
+
+    id: str
+    query: str
+    expected_action: Action
+    expected_source_docs: list[str]
+    support_terms: list[str]
+    pair_id: str | None = None
+    perturbation: str | None = None
+    risk_tags: list[str] = Field(default_factory=list)
+
+
+class DatasetProfile(BaseModel):
+    """Versioned description of the synthetic offline benchmark dataset."""
+
+    dataset_id: str
+    version: str
+    source_path: str
+    synthetic: bool = True
+    annotation_method: str
+    total_examples: int
+    pair_count: int
+    metric_populations: dict[str, int]
+    distributions: dict[str, dict[str, int]]
+    fields: list[DatasetFieldDefinition]
+    sample_examples: list[DatasetExampleSummary]
+
+
+class LiveMetricDefinition(BaseModel):
+    """Aggregate reference-free signal over recent interactive requests."""
+
+    name: str
+    label: str
+    value: float = Field(ge=0.0, le=1.0)
+    threshold: float = Field(ge=0.0, le=1.0)
+    passed: bool | None
+    sample_count: int = Field(ge=0)
+    explanation: str
+    formula: str
+
+
+class LiveEvaluationRecord(BaseModel):
+    """Reference-free evaluation of one interactive request."""
+
+    request_id: str
+    timestamp: str
+    query: str
+    provider: str
+    latency_ms: float = Field(ge=0.0)
+    retrieved_count: int = Field(ge=0)
+    metrics: dict[str, float]
+    checks: dict[str, bool]
+    requires_review: bool
+
+
+class LiveMonitoringReport(BaseModel):
+    """Rolling live signals kept in memory for the local demo."""
+
+    total_requests: int
+    window_size: int
+    review_count: int
+    pass_rate: float = Field(ge=0.0, le=1.0)
+    average_latency_ms: float = Field(ge=0.0)
+    latency_p95_ms: float = Field(ge=0.0)
+    quality_metrics: list[LiveMetricDefinition]
+    recent_records: list[LiveEvaluationRecord]

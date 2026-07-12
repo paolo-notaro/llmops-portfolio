@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
@@ -12,25 +11,11 @@ from rich.table import Table
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from llmops_portfolio.config import load_settings
+from llmops_portfolio.dataset import build_dataset_profile, load_evaluation_examples
 from llmops_portfolio.evaluators import evaluate_examples
-from llmops_portfolio.models import EvaluationExample
 from llmops_portfolio.providers import provider_from_env
 from llmops_portfolio.rag import LocalTfidfRAGIndex
 from llmops_portfolio.report import write_report
-
-
-def load_evaluation_examples(eval_dir: Path) -> list[EvaluationExample]:
-    """Load all JSONL examples from the evaluation directory."""
-
-    examples: list[EvaluationExample] = []
-    for path in sorted(eval_dir.glob("*.jsonl")):
-        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if line.strip():
-                payload = json.loads(line)
-                examples.append(EvaluationExample(**payload))
-            else:
-                raise ValueError(f"Blank line in {path}:{line_number}")
-    return examples
 
 
 def main() -> None:
@@ -41,6 +26,7 @@ def main() -> None:
     index = LocalTfidfRAGIndex.from_directory(settings.docs_dir)
     provider = provider_from_env(settings.llm_provider)
     examples = load_evaluation_examples(settings.eval_dir)
+    profile = build_dataset_profile(examples, settings.eval_dir)
     report = evaluate_examples(
         examples,
         index,
@@ -49,10 +35,12 @@ def main() -> None:
         max_latency_ms=settings.max_latency_ms,
         config={
             "provider": provider.name,
-            "docs_dir": str(settings.docs_dir),
-            "eval_dir": str(settings.eval_dir),
+            "retriever": "tfidf",
+            "dataset_id": profile.dataset_id,
+            "dataset_version": profile.version,
             "top_k": 3,
             "max_latency_ms": settings.max_latency_ms,
+            "mode": "offline_snapshot",
         },
     )
     json_path, markdown_path = write_report(report, settings.reports_dir)
@@ -73,7 +61,7 @@ def print_summary(console: Console, report) -> None:
         table.add_row(metric.label, f"{metric.value:.3f}", f"{metric.threshold:.3f}")
     console.print(table)
     console.print(f"Total examples: {report.summary.total_examples}")
-    console.print(f"Readiness score: {report.summary.pass_rate:.3f}")
+    console.print(f"Quality gates: {report.summary.gates_passed}/{report.summary.gates_total}")
     console.print(f"Average latency: {report.summary.average_latency_ms:.3f} ms")
     console.print(f"p95 latency: {report.summary.latency_p95_ms:.3f} ms")
     console.print(f"Examples requiring review: {report.summary.review_count}")

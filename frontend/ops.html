@@ -3,102 +3,144 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Operations Console | LLMOps Portfolio</title>
-    <link rel="stylesheet" href="/assets/styles.css?v=7" />
+    <link rel="icon" type="image/svg+xml" href="/assets/llmops-mark.svg?v=8" />
+    <title>Evaluation Console | LLMOps Portfolio</title>
+    <link rel="stylesheet" href="/assets/styles.css?v=10" />
     <link rel="stylesheet" href="/assets/vendor/katex/katex.min.css?v=1" />
   </head>
   <body class="ops-page">
     <header class="product-header ops-header">
       <a class="product-brand" href="/" aria-label="LLMOps Portfolio home">
-        <img class="brand-logo" src="/assets/llmops-logo.svg" alt="LLMOps Portfolio" />
-        <span class="brand-context"><strong>Operations Console</strong></span>
+        <img class="brand-logo" src="/assets/llmops-logo.svg?v=8" alt="LLMOps Portfolio" />
+        <span class="brand-context"><strong>Evaluation Console</strong></span>
       </a>
       <div class="header-actions">
-        <div class="runtime-status ok"><span class="status-dot ok"></span><span>Local run</span><small>mock provider</small></div>
+        <div class="runtime-status ok"><span class="status-dot ok"></span><span>Local runtime</span><small>mock provider</small></div>
         <nav aria-label="Primary navigation"><a href="/app">Customer app</a><a href="/docs">API</a></nav>
       </div>
     </header>
 
     <main class="ops-layout">
       <div class="ops-intro">
-        <div><p class="section-kicker">Local baseline</p><h1>Evaluation results</h1></div>
-        <p>Synthetic ground truth / mock provider / TF-IDF retrieval (k = 3)</p>
+        <div><p class="section-kicker">Evaluation control</p><h1>Quality and live signals</h1></div>
+        <p>Offline scores use annotated synthetic ground truth / live checks use reference-free request signals</p>
       </div>
 
-      <section class="summary-strip" aria-label="Evaluation summary">
-        <div class="summary-item"><span>Cases</span><strong id="totalExamples">--</strong><small>synthetic ground truth</small></div>
-        <div class="summary-item"><span>Mean quality</span><strong id="passRate">--</strong><small>unweighted / 6 metrics</small></div>
-        <div class="summary-item review"><span>Flagged records</span><strong id="reviewCount">--</strong><small>record-level review</small></div>
-        <div class="summary-item"><span>Latency p95</span><strong id="p95Latency">--</strong><small>provider generation</small></div>
-      </section>
+      <section class="evaluation-section" aria-labelledby="offlineHeading">
+        <div class="evaluation-section-heading">
+          <div><span class="evaluation-mode offline">Versioned snapshot</span><h2 id="offlineHeading">Offline benchmark</h2><p>Comparable release gates over a fixed annotated dataset</p></div>
+          <div class="benchmark-actions"><span id="benchmarkStamp">Loading snapshot</span><button id="runBenchmark" class="secondary-button" type="button">Run benchmark</button></div>
+        </div>
+        <div class="summary-strip benchmark-summary">
+          <div class="summary-item"><span>Quality gates</span><strong id="offlineGates">--</strong><small>passed / total</small></div>
+          <div class="summary-item"><span>Annotated cases</span><strong id="totalExamples">--</strong><small>fixed evaluation set</small></div>
+          <div class="summary-item review"><span>Review queue</span><strong id="reviewCount">--</strong><small>record-level failures</small></div>
+          <div class="summary-item"><span>Dataset version</span><strong class="version-value" id="datasetVersion">--</strong><small>content hash</small></div>
+        </div>
 
-      <section class="ops-grid ops-grid-primary">
-        <article class="ops-panel quality-panel">
-          <div class="panel-heading">
-            <div><p class="section-kicker">Offline evaluation</p><h2>Metric scores</h2></div>
-            <button id="refreshEval" class="secondary-button" type="button">Run again</button>
-          </div>
-          <div class="quality-workbench">
-            <div class="metric-table" aria-label="Evaluation metric results">
-              <div class="metric-table-head"><span>Metric</span><span>Score</span><span>Gate</span></div>
-              <div id="dimensionTable" class="metric-table-body"><p class="loading-copy">Running 30 cases</p></div>
+        <div class="ops-grid ops-grid-primary">
+          <article class="ops-panel quality-panel">
+            <div class="panel-heading compact">
+              <div><p class="section-kicker">Six labeled metrics</p><h2>Gate results</h2></div>
+              <span class="count-label">deterministic</span>
             </div>
-            <aside id="metricDetail" class="metric-detail-panel" aria-live="polite">
-              <p class="loading-copy">Select a metric</p>
-            </aside>
-          </div>
-        </article>
+            <div class="quality-workbench">
+              <div class="metric-table" aria-label="Offline evaluation metric results">
+                <div class="metric-table-head"><span>Metric</span><span>Score</span><span>Gate</span></div>
+                <div id="dimensionTable" class="metric-table-body"><p class="loading-copy">Loading benchmark</p></div>
+              </div>
+              <aside id="metricDetail" class="metric-detail-panel" aria-live="polite"><p class="loading-copy">Select a metric</p></aside>
+            </div>
+          </article>
 
-        <article class="ops-panel trace-panel-shell">
+          <article class="ops-panel">
+            <div class="panel-heading compact"><div><p class="section-kicker">Below threshold</p><h2>Findings</h2></div></div>
+            <div class="insight-list" id="insightList"><p class="loading-copy">Loading findings</p></div>
+          </article>
+        </div>
+
+        <article class="ops-panel review-panel">
           <div class="panel-heading compact">
-            <div><p class="section-kicker">Online request</p><h2>Latest trace</h2></div>
-            <span class="live-label">5 s</span>
+            <div><p class="section-kicker">Record-level failures</p><h2>Review queue</h2></div>
+            <span class="count-label">first 8</span>
           </div>
-          <div id="tracePanel" class="trace-panel"><p class="empty-copy">No query recorded</p></div>
+          <div class="review-list review-list-grid" id="reviewList"><p class="loading-copy">Loading records</p></div>
         </article>
       </section>
 
-      <section class="ops-grid">
-        <article class="ops-panel">
-          <div class="panel-heading compact">
-            <div><p class="section-kicker">Failed gates</p><h2>Recommendations</h2></div>
-          </div>
-          <div class="insight-list" id="insightList"><p class="loading-copy">Checking thresholds</p></div>
-        </article>
-        <article class="ops-panel">
-          <div class="panel-heading compact">
-            <div><p class="section-kicker">Flagged records</p><h2>Review queue</h2></div>
-            <span class="count-label">top 8</span>
-          </div>
-          <div class="review-list" id="reviewList"><p class="loading-copy">Loading records</p></div>
+      <section class="evaluation-section live-section" aria-labelledby="liveHeading">
+        <div class="evaluation-section-heading">
+          <div><span class="evaluation-mode live">Rolling window</span><h2 id="liveHeading">Live request checks</h2><p>Diagnostic proxies from customer-app traffic / not labeled accuracy</p></div>
+          <div class="benchmark-actions"><span id="liveWindowLabel">Last 0 of 50 requests</span><button id="refreshLive" class="secondary-button" type="button">Refresh</button></div>
+        </div>
+        <div class="summary-strip live-summary">
+          <div class="summary-item"><span>Total requests</span><strong id="liveRequestCount">0</strong><small>since process start</small></div>
+          <div class="summary-item"><span>Proxy pass rate</span><strong id="livePassRate">--</strong><small>all five checks</small></div>
+          <div class="summary-item review"><span>Review signals</span><strong id="liveReviewCount">0</strong><small>current window</small></div>
+          <div class="summary-item"><span>Latency p95</span><strong id="liveP95">--</strong><small>provider generation</small></div>
+        </div>
+        <div class="ops-grid live-grid">
+          <article class="ops-panel">
+            <div class="panel-heading compact"><div><p class="section-kicker">Reference-free</p><h2>Proxy metrics</h2></div><span class="count-label">5 signals</span></div>
+            <div id="liveMetricList" class="live-metric-list"><p class="loading-copy">Loading live signals</p></div>
+          </article>
+          <article class="ops-panel">
+            <div class="panel-heading compact"><div><p class="section-kicker">Recent traffic</p><h2>Request window</h2></div><a class="text-link" href="/app">Send a query</a></div>
+            <div id="liveRecordList" class="live-record-list"><p class="loading-copy">Loading requests</p></div>
+          </article>
+        </div>
+      </section>
+
+      <section class="evaluation-section dataset-section" aria-labelledby="datasetHeading">
+        <div class="evaluation-section-heading">
+          <div><span class="evaluation-mode dataset">Ground truth</span><h2 id="datasetHeading">Annotated offline dataset</h2><p id="datasetMethod">Loading annotation method</p></div>
+          <div class="dataset-identity"><strong id="datasetId">--</strong><code id="datasetPath">--</code></div>
+        </div>
+        <div class="dataset-summary-row">
+          <div><span>Cases</span><strong id="datasetCases">--</strong></div>
+          <div><span>Prompt families</span><strong id="datasetPairs">--</strong></div>
+          <div><span>Expected answers</span><strong id="answerCases">--</strong></div>
+          <div><span>Refusals / abstentions</span><strong id="nonAnswerCases">--</strong></div>
+        </div>
+        <div class="dataset-grid">
+          <article class="ops-panel methodology-panel">
+            <div class="panel-heading compact"><div><p class="section-kicker">Annotation schema</p><h2>Human-authored labels</h2></div></div>
+            <div id="datasetFields" class="definition-list"><p class="loading-copy">Loading fields</p></div>
+          </article>
+          <article class="ops-panel methodology-panel">
+            <div class="panel-heading compact"><div><p class="section-kicker">Metric denominators</p><h2>Evaluation populations</h2></div></div>
+            <div id="metricPopulations" class="population-list"><p class="loading-copy">Loading populations</p></div>
+          </article>
+          <article class="ops-panel methodology-panel">
+            <div class="panel-heading compact"><div><p class="section-kicker">Coverage</p><h2>Dataset composition</h2></div></div>
+            <div id="datasetDistributions" class="distribution-list"><p class="loading-copy">Loading coverage</p></div>
+          </article>
+        </div>
+        <article class="ops-panel sample-panel">
+          <div class="panel-heading compact"><div><p class="section-kicker">Inspectable labels</p><h2>Representative annotations</h2></div></div>
+          <div id="datasetSamples" class="sample-list"><p class="loading-copy">Loading examples</p></div>
         </article>
       </section>
 
       <section class="ops-panel topology-panel">
-        <div class="panel-heading compact">
-          <div><p class="section-kicker">Request path</p><h2>Components</h2></div>
-        </div>
+        <div class="panel-heading compact"><div><p class="section-kicker">Request path</p><h2>Components</h2></div></div>
         <div class="topology" aria-label="RAG and evaluation topology">
           <div class="topology-node"><span>01</span><strong>User query</strong><small>API request</small></div>
-          <div class="topology-node"><span>02</span><strong>Safety check</strong><small>prompt classifier</small></div>
+          <div class="topology-node"><span>02</span><strong>Safety check</strong><small>policy routing</small></div>
           <div class="topology-node"><span>03</span><strong>TF-IDF retrieval</strong><small>cosine similarity</small></div>
           <div class="topology-node"><span>04</span><strong>Mock generation</strong><small>deterministic provider</small></div>
-          <div class="topology-node"><span>05</span><strong>Evaluation</strong><small>offline heuristics</small></div>
-          <div class="topology-node"><span>06</span><strong>Observability</strong><small>JSON / Prometheus</small></div>
+          <div class="topology-node"><span>05</span><strong>Live checks</strong><small>reference-free proxies</small></div>
+          <div class="topology-node"><span>06</span><strong>Offline gates</strong><small>annotated benchmark</small></div>
         </div>
       </section>
 
       <section class="ops-grid ops-grid-secondary">
         <article class="ops-panel">
-          <div class="panel-heading compact">
-            <div><p class="section-kicker">Metrics endpoint</p><h2>/metrics</h2></div>
-          </div>
+          <div class="panel-heading compact"><div><p class="section-kicker">Metrics endpoint</p><h2>/metrics</h2></div></div>
           <pre class="metrics-box" id="metricsText">Loading metrics</pre>
         </article>
         <article class="ops-panel">
-          <div class="panel-heading compact">
-            <div><p class="section-kicker">Documentation</p><h2>Case studies</h2></div>
-          </div>
+          <div class="panel-heading compact"><div><p class="section-kicker">Further reading</p><h2>Case studies</h2></div></div>
           <div class="case-list">
             <a href="/portfolio-docs/case-studies/01-llm-evaluation-platform.md"><span>01</span><strong>LLM evaluation platform</strong></a>
             <a href="/portfolio-docs/case-studies/02-rag-observability-stack.md"><span>02</span><strong>RAG observability stack</strong></a>
@@ -110,6 +152,6 @@
       </section>
     </main>
     <script src="/assets/vendor/katex/katex.min.js?v=1"></script>
-    <script src="/assets/ops.js?v=7"></script>
+    <script src="/assets/ops.js?v=8"></script>
   </body>
 </html>

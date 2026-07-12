@@ -65,7 +65,9 @@ def render_metrics_payload(report: EvaluationReport) -> dict[str, object]:
         "timestamp": report.timestamp,
         "config": report.config,
         "total_examples": report.summary.total_examples,
-        "readiness_score": report.summary.pass_rate,
+        "unweighted_quality_mean": report.summary.pass_rate,
+        "gates_passed": report.summary.gates_passed,
+        "gates_total": report.summary.gates_total,
         "review_count": report.summary.review_count,
         "latency": {
             "average_ms": report.summary.average_latency_ms,
@@ -102,19 +104,23 @@ def render_markdown_report(report: EvaluationReport) -> str:
             "| Metric | Value |",
             "| --- | ---: |",
             f"| Total examples | {summary.total_examples} |",
-            f"| Readiness score | {summary.pass_rate:.3f} |",
+            f"| Quality gates passed | {summary.gates_passed} / {summary.gates_total} |",
+            f"| Unweighted quality mean | {summary.pass_rate:.3f} |",
             f"| Average latency ms | {summary.average_latency_ms:.3f} |",
             f"| p95 latency ms | {summary.latency_p95_ms:.3f} |",
             f"| Examples requiring review | {summary.review_count} |",
             "",
             "## Quality Metrics",
             "",
-            "| Metric | Value | Threshold | Formula |",
-            "| --- | ---: | ---: | --- |",
+            "| Metric | Value | Threshold | Population | n | Formula |",
+            "| --- | ---: | ---: | --- | ---: | --- |",
         ]
     )
     for metric in summary.quality_metrics:
-        lines.append(f"| {metric.label} | {metric.value:.3f} | {metric.threshold:.3f} | {metric.formula} |")
+        lines.append(
+            f"| {metric.label} | {metric.value:.3f} | {metric.threshold:.3f} | "
+            f"{metric.population} | {metric.sample_count} | {metric.formula} |"
+        )
     lines.extend(["", "## Insights", ""])
     for insight in report.insights:
         lines.append(f"- **{insight.severity.upper()} / {insight.dimension}:** {insight.finding} Recommendation: {insight.recommendation}")
