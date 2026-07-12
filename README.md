@@ -25,6 +25,12 @@ The goal is to show how I think about LLM evaluation, RAG quality, observability
 - Clean separation between retrieval, providers, evaluators, reporting, observability, and API layers.
 - Privacy-safe documentation and sanitized case studies for production-style LLMOps patterns.
 
+## Demo Preview
+
+![LLMOps portfolio demo showing the assistant, cited retrieval, offline gates, and live monitoring](docs/assets/llmops-demo.gif)
+
+The preview mirrors the local FastAPI demo surfaces: `/app` for the synthetic RAG assistant and `/ops` for the evaluation console.
+
 ## Quickstart
 
 ```bash

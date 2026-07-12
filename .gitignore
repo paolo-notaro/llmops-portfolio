@@ -27,6 +27,7 @@ secrets/
 
 # Generated reports and runtime output
 reports/
+.playwright-browsers/
 logs/
 *.log
 
