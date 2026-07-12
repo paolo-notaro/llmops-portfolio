@@ -2504,10 +2504,8 @@ input:focus {
   color: #173f48;
 }
 
-.topology-node:nth-child(odd)::before,
-.home-path > div:nth-child(odd) span {
+.topology-node:nth-child(odd)::before {
   background: var(--cyan-bright);
-  color: var(--cyan-dark);
 }
 
 .topology-node:nth-child(odd) > span,
@@ -2540,4 +2538,20 @@ input:focus {
 
 .live-record-row.pass {
   box-shadow: inset 3px 0 0 var(--green-bright);
+}
+
+
+.home-path > div:nth-child(even) span,
+.home-route.operations .route-index {
+  color: var(--green);
+}
+
+.quality-checks .pass i,
+.metric-row.pass .metric-name i {
+  background: var(--green-bright);
+}
+
+.metric-row.review .metric-track i,
+.live-metric-row.review .live-metric-track i {
+  background: var(--amber);
 }
