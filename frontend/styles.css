@@ -584,13 +584,14 @@ input:focus {
 .primary-button {
   min-width: 132px;
   padding: 8px 15px;
-  border-color: var(--green);
-  background: var(--green);
+  border-color: var(--cyan);
+  background: var(--cyan);
   color: white;
 }
 
 .primary-button:hover {
-  background: var(--green-dark);
+  border-color: var(--cyan-dark);
+  background: var(--cyan-dark);
 }
 
 .primary-button:disabled,
