@@ -1,0 +1,180 @@
+"""Shared Pydantic models for the LLMOps portfolio demo."""
+
+from __future__ import annotations
+
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
+
+
+Action = Literal["answer", "refuse", "abstain"]
+
+
+class DocumentChunk(BaseModel):
+    """A chunk of a synthetic source document."""
+
+    doc_id: str
+    title: str
+    path: str
+    chunk_id: str
+    text: str
+
+
+class RetrievedDocument(DocumentChunk):
+    """A retrieved document chunk with a similarity score."""
+
+    score: float = Field(ge=0.0)
+
+
+class DocumentSummary(BaseModel):
+    """Public metadata for one indexed synthetic document."""
+
+    doc_id: str
+    title: str
+    description: str
+    chunk_count: int = Field(ge=1)
+    indexed: bool = True
+
+
+class EvaluationExample(BaseModel):
+    """One ground-truth evaluation example."""
+
+    id: str
+    category: str
+    query: str
+    expected_source_docs: list[str] = Field(default_factory=list)
+    support_terms: list[str] = Field(default_factory=list)
+    expected_action: Action = "answer"
+    required_format: str = "answer_with_citations"
+    pair_id: str | None = None
+    perturbation: str | None = None
+    risk_tags: list[str] = Field(default_factory=list)
+
+    # Backward-compatible fields for the original small JSONL examples/tests.
+    expected_terms: list[str] = Field(default_factory=list)
+    required_citations: bool = True
+    unsafe: bool = False
+    expected_refusal: bool = False
+    expected_format: str = "answer_with_citations"
+
+
+class LLMResponse(BaseModel):
+    """Provider response with measured latency."""
+
+    answer: str
+    provider: str
+    latency_ms: float = Field(ge=0.0)
+
+
+class DimensionResult(BaseModel):
+    """Result for one evaluation dimension."""
+
+    name: str
+    passed: bool
+    score: float = Field(ge=0.0, le=1.0)
+    details: str
+    formula: str | None = None
+    threshold: float | None = None
+
+
+class MetricDefinition(BaseModel):
+    """Definition and aggregate value for a portfolio-quality metric."""
+
+    name: str
+    label: str
+    value: float = Field(ge=0.0, le=1.0)
+    threshold: float = Field(ge=0.0, le=1.0)
+    formula: str
+    formula_latex: str
+    formula_notation: str
+    formula_notation_latex: list[str]
+    explanation: str
+    passed: bool
+
+
+class EvaluationInsight(BaseModel):
+    """Actionable interpretation generated from metric outcomes."""
+
+    severity: Literal["low", "medium", "high"]
+    dimension: str
+    finding: str
+    recommendation: str
+
+
+class EvaluationRecord(BaseModel):
+    """Evaluation outcome for one example."""
+
+    example_id: str
+    category: str
+    query: str
+    answer: str
+    provider: str
+    latency_ms: float
+    retrieved_docs: list[RetrievedDocument]
+    dimensions: list[DimensionResult]
+    passed: bool
+    requires_review: bool
+    notes: list[str] = Field(default_factory=list)
+    expected_action: Action = "answer"
+    predicted_action: Action = "answer"
+    expected_source_docs: list[str] = Field(default_factory=list)
+    cited_docs: list[str] = Field(default_factory=list)
+    support_terms: list[str] = Field(default_factory=list)
+    pair_id: str | None = None
+    perturbation: str | None = None
+    risk_tags: list[str] = Field(default_factory=list)
+    metric_scores: dict[str, float] = Field(default_factory=dict)
+
+
+class SummaryMetrics(BaseModel):
+    """Aggregate report metrics."""
+
+    total_examples: int
+    average_latency_ms: float
+    pass_rate: float
+    dimension_pass_rates: dict[str, float]
+    retrieval_hit_rate: float
+    review_count: int
+    quality_metrics: list[MetricDefinition] = Field(default_factory=list)
+    latency_p50_ms: float = 0.0
+    latency_p95_ms: float = 0.0
+    operational_slo_passed: bool = True
+
+
+class EvaluationReport(BaseModel):
+    """Machine-readable evaluation report."""
+
+    timestamp: str
+    config: dict[str, Any]
+    summary: SummaryMetrics
+    records: list[EvaluationRecord]
+    insights: list[EvaluationInsight] = Field(default_factory=list)
+    artifact_paths: dict[str, str] = Field(default_factory=dict)
+
+
+class QueryRequest(BaseModel):
+    """Request body for the query API."""
+
+    query: str = Field(min_length=1, max_length=2000)
+    top_k: int = Field(default=3, ge=1, le=8)
+
+
+class QueryResponse(BaseModel):
+    """Response body for the query API."""
+
+    answer: str
+    provider: str
+    latency_ms: float
+    retrieved_docs: list[RetrievedDocument]
+    quality_checks: dict[str, bool] = Field(default_factory=dict)
+
+
+class QueryTrace(BaseModel):
+    """Latest query trace exposed to the Ops console."""
+
+    query: str | None = None
+    answer: str | None = None
+    provider: str | None = None
+    latency_ms: float = 0.0
+    retrieved_docs: list[RetrievedDocument] = Field(default_factory=list)
+    quality_checks: dict[str, bool] = Field(default_factory=dict)

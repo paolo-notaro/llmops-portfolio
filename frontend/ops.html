@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Operations Console | LLMOps Portfolio</title>
+    <link rel="stylesheet" href="/assets/styles.css?v=7" />
+    <link rel="stylesheet" href="/assets/vendor/katex/katex.min.css?v=1" />
+  </head>
+  <body class="ops-page">
+    <header class="product-header ops-header">
+      <a class="product-brand" href="/" aria-label="LLMOps Portfolio home">
+        <img class="brand-logo" src="/assets/llmops-logo.svg" alt="LLMOps Portfolio" />
+        <span class="brand-context"><strong>Operations Console</strong></span>
+      </a>
+      <div class="header-actions">
+        <div class="runtime-status ok"><span class="status-dot ok"></span><span>Local run</span><small>mock provider</small></div>
+        <nav aria-label="Primary navigation"><a href="/app">Customer app</a><a href="/docs">API</a></nav>
+      </div>
+    </header>
+
+    <main class="ops-layout">
+      <div class="ops-intro">
+        <div><p class="section-kicker">Local baseline</p><h1>Evaluation results</h1></div>
+        <p>Synthetic ground truth / mock provider / TF-IDF retrieval (k = 3)</p>
+      </div>
+
+      <section class="summary-strip" aria-label="Evaluation summary">
+        <div class="summary-item"><span>Cases</span><strong id="totalExamples">--</strong><small>synthetic ground truth</small></div>
+        <div class="summary-item"><span>Mean quality</span><strong id="passRate">--</strong><small>unweighted / 6 metrics</small></div>
+        <div class="summary-item review"><span>Flagged records</span><strong id="reviewCount">--</strong><small>record-level review</small></div>
+        <div class="summary-item"><span>Latency p95</span><strong id="p95Latency">--</strong><small>provider generation</small></div>
+      </section>
+
+      <section class="ops-grid ops-grid-primary">
+        <article class="ops-panel quality-panel">
+          <div class="panel-heading">
+            <div><p class="section-kicker">Offline evaluation</p><h2>Metric scores</h2></div>
+            <button id="refreshEval" class="secondary-button" type="button">Run again</button>
+          </div>
+          <div class="quality-workbench">
+            <div class="metric-table" aria-label="Evaluation metric results">
+              <div class="metric-table-head"><span>Metric</span><span>Score</span><span>Gate</span></div>
+              <div id="dimensionTable" class="metric-table-body"><p class="loading-copy">Running 30 cases</p></div>
+            </div>
+            <aside id="metricDetail" class="metric-detail-panel" aria-live="polite">
+              <p class="loading-copy">Select a metric</p>
+            </aside>
+          </div>
+        </article>
+
+        <article class="ops-panel trace-panel-shell">
+          <div class="panel-heading compact">
+            <div><p class="section-kicker">Online request</p><h2>Latest trace</h2></div>
+            <span class="live-label">5 s</span>
+          </div>
+          <div id="tracePanel" class="trace-panel"><p class="empty-copy">No query recorded</p></div>
+        </article>
+      </section>
+
+      <section class="ops-grid">
+        <article class="ops-panel">
+          <div class="panel-heading compact">
+            <div><p class="section-kicker">Failed gates</p><h2>Recommendations</h2></div>
+          </div>
+          <div class="insight-list" id="insightList"><p class="loading-copy">Checking thresholds</p></div>
+        </article>
+        <article class="ops-panel">
+          <div class="panel-heading compact">
+            <div><p class="section-kicker">Flagged records</p><h2>Review queue</h2></div>
+            <span class="count-label">top 8</span>
+          </div>
+          <div class="review-list" id="reviewList"><p class="loading-copy">Loading records</p></div>
+        </article>
+      </section>
+
+      <section class="ops-panel topology-panel">
+        <div class="panel-heading compact">
+          <div><p class="section-kicker">Request path</p><h2>Components</h2></div>
+        </div>
+        <div class="topology" aria-label="RAG and evaluation topology">
+          <div class="topology-node"><span>01</span><strong>User query</strong><small>API request</small></div>
+          <div class="topology-node"><span>02</span><strong>Safety check</strong><small>prompt classifier</small></div>
+          <div class="topology-node"><span>03</span><strong>TF-IDF retrieval</strong><small>cosine similarity</small></div>
+          <div class="topology-node"><span>04</span><strong>Mock generation</strong><small>deterministic provider</small></div>
+          <div class="topology-node"><span>05</span><strong>Evaluation</strong><small>offline heuristics</small></div>
+          <div class="topology-node"><span>06</span><strong>Observability</strong><small>JSON / Prometheus</small></div>
+        </div>
+      </section>
+
+      <section class="ops-grid ops-grid-secondary">
+        <article class="ops-panel">
+          <div class="panel-heading compact">
+            <div><p class="section-kicker">Metrics endpoint</p><h2>/metrics</h2></div>
+          </div>
+          <pre class="metrics-box" id="metricsText">Loading metrics</pre>
+        </article>
+        <article class="ops-panel">
+          <div class="panel-heading compact">
+            <div><p class="section-kicker">Documentation</p><h2>Case studies</h2></div>
+          </div>
+          <div class="case-list">
+            <a href="/portfolio-docs/case-studies/01-llm-evaluation-platform.md"><span>01</span><strong>LLM evaluation platform</strong></a>
+            <a href="/portfolio-docs/case-studies/02-rag-observability-stack.md"><span>02</span><strong>RAG observability stack</strong></a>
+            <a href="/portfolio-docs/case-studies/03-vllm-kubernetes-serving.md"><span>03</span><strong>vLLM / Kubernetes serving</strong></a>
+            <a href="/portfolio-docs/case-studies/04-ml-security-privacy.md"><span>04</span><strong>ML security and privacy</strong></a>
+            <a href="/portfolio-docs/case-studies/05-aiops-reliability.md"><span>05</span><strong>AIOps reliability</strong></a>
+          </div>
+        </article>
+      </section>
+    </main>
+    <script src="/assets/vendor/katex/katex.min.js?v=1"></script>
+    <script src="/assets/ops.js?v=7"></script>
+  </body>
+</html>

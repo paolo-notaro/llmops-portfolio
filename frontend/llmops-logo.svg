@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 86" role="img" aria-labelledby="title desc">
+  <title id="title">LLMOps Portfolio</title>
+  <desc id="desc">Transparent LLMOps Portfolio logo with a terminal prompt, model routing nodes, and deployment checkpoint.</desc>
+  <defs>
+    <linearGradient id="railGradient" x1="16" x2="214" y1="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#13b8d7"/>
+      <stop offset="0.56" stop-color="#15b8d3"/>
+      <stop offset="1" stop-color="#39b86d"/>
+    </linearGradient>
+    <filter id="nodeGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.25 0 0 0 0 0.78 0 0 0 0 0.45 0 0 0 .65 0"/>
+      <feBlend in="SourceGraphic"/>
+    </filter>
+  </defs>
+
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="18" y="27" width="38" height="32" rx="7" stroke="#13b8d7" stroke-width="4"/>
+    <path d="m30 37 8 6-8 6" stroke="#18201b" stroke-width="4"/>
+    <path d="M42 52h9" stroke="#18201b" stroke-width="4"/>
+    <path d="M57 43h27v-16" stroke="url(#railGradient)" stroke-width="4"/>
+    <path d="M84 43v18h32v-34" stroke="url(#railGradient)" stroke-width="4"/>
+    <path d="M116 61h32V27" stroke="url(#railGradient)" stroke-width="4"/>
+    <path d="M148 27v28h18l14-18 14 18h18V27" stroke="url(#railGradient)" stroke-width="4"/>
+    <path d="M212 43h28" stroke="#39b86d" stroke-width="4"/>
+    <path d="M221 43c22-18 22-18 34-18" stroke="#13b8d7" stroke-width="4"/>
+    <path d="M221 43c22 18 22 18 34 18" stroke="#39b86d" stroke-width="4"/>
+    <g stroke-width="4">
+      <circle cx="84" cy="27" r="5" stroke="#13b8d7"/><circle cx="84" cy="43" r="5" stroke="#13b8d7"/>
+      <circle cx="116" cy="61" r="5" stroke="#13b8d7"/><circle cx="148" cy="61" r="5" stroke="#13b8d7"/>
+      <circle cx="148" cy="27" r="5" stroke="#39b86d"/><circle cx="166" cy="55" r="5" stroke="#39b86d"/>
+      <circle cx="212" cy="27" r="5" stroke="#39b86d"/><circle cx="212" cy="55" r="5" stroke="#39b86d"/>
+    </g>
+    <circle cx="264" cy="25" r="15" stroke="#7890a1" stroke-width="3"/>
+    <path d="M257 31v-8m7 8V19m7 12V15" stroke="#13b8d7" stroke-width="3"/>
+    <circle cx="264" cy="61" r="15" stroke="#7890a1" stroke-width="3"/>
+    <path d="m257 61 5 5 10-11" stroke="#13b8d7" stroke-width="4"/>
+    <circle cx="242" cy="43" r="15" stroke="#39b86d" stroke-width="4" filter="url(#nodeGlow)"/>
+    <path d="m235 39 7-4 7 4v8l-7 4-7-4zM242 35v8l7 4M242 43l-7 4" stroke="#39b86d" stroke-width="2"/>
+  </g>
+  <g fill="#18201b">
+    <text x="292" y="40" font-family="Source Sans 3, Segoe UI, Arial, sans-serif" font-size="24" font-weight="700">LLMOps</text>
+    <text x="292" y="61" font-family="IBM Plex Mono, Consolas, monospace" font-size="12" font-weight="500" letter-spacing=".8">PORTFOLIO</text>
+  </g>
+</svg>

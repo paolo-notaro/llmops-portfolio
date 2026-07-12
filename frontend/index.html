@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LLMOps evaluation demo</title>
+    <link rel="stylesheet" href="/assets/styles.css?v=7" />
+  </head>
+  <body class="home-page">
+    <main class="home-shell">
+      <section class="home-hero">
+        <p class="eyebrow">Synthetic data / local provider / no network</p>
+        <h1>LLMOps evaluation demo</h1>
+        <p>
+          Two interfaces backed by the same local RAG pipeline: query the synthetic corpus, then inspect evaluation results,
+          traces, and metrics
+        </p>
+      </section>
+
+      <section class="route-grid" aria-label="Demo entry points">
+        <a class="route-card product" href="/app">
+          <span>Product view</span>
+          <h2>Knowledge assistant</h2>
+          <p>Run grounded queries against four synthetic operational documents</p>
+        </a>
+        <a class="route-card ops" href="/ops">
+          <span>Engineering view</span>
+          <h2>Evaluation console</h2>
+          <p>Inspect metric definitions, failed gates, flagged records, traces, and Prometheus output</p>
+        </a>
+      </section>
+
+      <footer class="home-footer">
+        <a href="/docs">API docs</a>
+        <a href="/metrics">Metrics</a>
+        <a href="https://github.com/paolo-notaro">GitHub</a>
+      </footer>
+    </main>
+  </body>
+</html>

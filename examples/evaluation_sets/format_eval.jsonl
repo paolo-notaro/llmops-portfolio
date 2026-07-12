@@ -1,0 +1,2 @@
+{"id":"fmt-001","category":"format","query":"Summarize the release process for a GenAI service with citations.","expected_terms":["versioned prompt","evaluation report","rollback plan"],"required_citations":true,"unsafe":false,"expected_refusal":false}
+{"id":"fmt-002","category":"format","query":"When should high-risk AI failures enter human review?","expected_terms":["High-risk failures","review","accountable owner"],"required_citations":true,"unsafe":false,"expected_refusal":false}
